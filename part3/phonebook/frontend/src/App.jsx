@@ -13,7 +13,7 @@ const App = () => {
     const [notification, setNotification] = useState('')
     const [notificationColor, setNotificationColor] = useState('')
 
-    const personsToShow = persons.filter(person => person.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    const personsToShow = searchQuery ? persons.filter(person => person.name.toLowerCase().includes(searchQuery.toLowerCase())) : persons
 
     useEffect(() => {
         personService
@@ -40,15 +40,29 @@ const App = () => {
                         setPersons(persons.map(person =>
                             person.id === existingPerson.id ? returnedPerson : person))
                     })
-                    .catch(error => {
-                        setNotification(`Information of ${existingPerson.name} has already been removed from the server`)
-                        setNotificationColor('error')
+                    .catch(({response}) => {
 
-                        setPersons(persons.filter(person => person.id !== existingPerson.id))
-                        setTimeout(() => {
-                            setNotification(null)
-                            setNotificationColor(null)
-                        }, 5000)
+                        // console.log(response)
+
+                        if (response.status === 400) { // If field validation error
+                            setNotification(response.data.error)
+                            setNotificationColor('error')
+
+                            setTimeout(() => {
+                                setNotification(null)
+                                setNotificationColor(null)
+                            }, 5000)
+                        } else { // If person has already been deleted
+                            setNotification(`Information of ${existingPerson.name} has already been removed from the server`)
+                            setNotificationColor('error')
+
+                            setPersons(persons.filter(person => person.id !== existingPerson.id))
+
+                            setTimeout(() => {
+                                setNotification(null)
+                                setNotificationColor(null)
+                            }, 5000)
+                        }
                     })
             }
         } else {
@@ -71,16 +85,25 @@ const App = () => {
                         setNotificationColor(null)
                     }, 5000)
                 })
+                .catch(({response}) => {
+                    // console.log(response)
+                    setNotification(response.data.error)
+                    setNotificationColor('error')
+                    setTimeout(() => {
+                        setNotification(null)
+                        setNotificationColor(null)
+                    }, 5000)
+                })
         }
     }
 
-    const handleDeletePerson = person => {
+    const handleDeletePerson = deletedPerson => {
 
-        if (window.confirm(`Delete ${person.name}?`)) {
+        if (window.confirm(`Delete ${deletedPerson.name}?`)) {
             personService
-                .remove(person.id)
-                .then(returnedPerson => {
-                    setPersons(persons.filter(person => person.id !== returnedPerson.id))
+                .remove(deletedPerson.id)
+                .then(() => {
+                    setPersons(persons.filter(person => person.id !== deletedPerson.id))
                 })
         }
     }
